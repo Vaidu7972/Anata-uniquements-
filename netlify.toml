@@ -1,0 +1,9 @@
+[build]
+  publish = "frontend"
+  command = "echo 'Static site - no build required'"
+
+# Handle client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
