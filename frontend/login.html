@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Ananta Techtonic</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fa-solid fa-layer-group text-accent me-2"></i>Ananta<span
+                    class="text-gradient">Techtonic</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container flex-grow-1 d-flex align-items-center justify-content-center py-5">
+        <div class="row w-100 justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="glass-panel p-5 position-relative overflow-hidden">
+
+                    <!-- Decorative blur -->
+                    <div class="position-absolute top-0 start-0 w-100 h-100 z-0"
+                        style="background: radial-gradient(circle at top right, rgba(108,92,231,0.2), transparent 50%); pointer-events: none;">
+                    </div>
+
+                    <div class="position-relative z-1">
+                        <div class="text-center mb-4">
+                            <h2 class="text-white mb-2">Welcome <span class="text-gradient">Back</span></h2>
+                            <p class="text-muted mb-0">Login to access the decentralized skill network.</p>
+                        </div>
+
+                        <div id="alertBox" class="alert d-none rounded-3" role="alert"></div>
+
+                        <form id="loginForm">
+                            <div class="mb-4">
+                                <label for="email" class="form-label ms-1">Email Nexus</label>
+                                <div class="input-group">
+                                    <span
+                                        class="input-group-text bg-transparent border-end-0 border-secondary text-muted"><i
+                                            class="fa-solid fa-envelope"></i></span>
+                                    <input type="email" class="form-control border-start-0 ps-0" id="email" required
+                                        placeholder="hacker@nexus.com">
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label for="password" class="form-label ms-1">Security Key</label>
+                                <div class="input-group">
+                                    <span
+                                        class="input-group-text bg-transparent border-end-0 border-secondary text-muted"><i
+                                            class="fa-solid fa-lock"></i></span>
+                                    <input type="password" class="form-control border-start-0 ps-0" id="password"
+                                        required placeholder="••••••••">
+                                </div>
+                            </div>
+                            <!-- Forgot Password Link -->
+                            <div class="text-end mb-4">
+                                <a href="#" class="text-accent small fw-bold text-decoration-none"
+                                    data-bs-toggle="modal" data-bs-target="#forgotPasswordModal"
+                                    id="forgotPasswordLink">
+                                    <i class="fa-solid fa-key me-1"></i>Forgot Security Key?
+                                </a>
+                            </div>
+                            <div class="d-grid gap-3">
+                                <button type="submit" class="btn btn-primary btn-lg rounded-pill" id="loginBtn">
+                                    <i class="fa-solid fa-right-to-bracket me-2"></i> Initialize Session
+                                </button>
+                                <a href="register.html" class="btn btn-outline-glow btn-lg rounded-pill">Create Node</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Forgot Password Modal -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-accent border-opacity-50 shadow-lg">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3"
+                    style="background: rgba(0, 206, 201, 0.1);">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-shield-keyhole text-accent me-3 fa-lg"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold text-white mb-0" id="forgotPasswordModalLabel">Reset Security
+                                Key</h5>
+                            <small class="text-muted font-monospace">NEXUS_AUTH // PASSWORD_RECOVERY</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 p-md-5 bg-dark bg-opacity-75">
+                    <div id="forgotAlertBox" class="alert d-none rounded-3 mb-4" role="alert"></div>
+                    <p class="text-muted mb-4">Enter your registered Email Nexus address. We will transmit a password
+                        reset link to your node.</p>
+                    <form id="forgotPasswordForm">
+                        <div class="mb-4">
+                            <label for="resetEmail"
+                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Email
+                                Nexus</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-dark border-secondary text-muted">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                                <input type="email"
+                                    class="form-control bg-dark border-start-0 border-secondary text-white"
+                                    id="resetEmail" required placeholder="your@email.com">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="newPassword"
+                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">New Security
+                                Key</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-dark border-secondary text-muted">
+                                    <i class="fa-solid fa-lock"></i>
+                                </span>
+                                <input type="password"
+                                    class="form-control bg-dark border-start-0 border-secondary text-white"
+                                    id="newPassword" required placeholder="Enter new password" minlength="6">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="confirmPassword"
+                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Confirm New
+                                Key</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-dark border-secondary text-muted">
+                                    <i class="fa-solid fa-lock-open"></i>
+                                </span>
+                                <input type="password"
+                                    class="form-control bg-dark border-start-0 border-secondary text-white"
+                                    id="confirmPassword" required placeholder="Confirm new password" minlength="6">
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit"
+                                class="btn btn-accent btn-lg fw-bold rounded-pill text-dark text-uppercase tracking-wide py-3"
+                                id="resetSubmitBtn">
+                                <i class="fa-solid fa-satellite-dish fa-fade me-2"></i> Reset Security Key
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Script -->
+    <script src="app.js"></script>
+</body>
+
+</html>
