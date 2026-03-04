@@ -1,8 +1,7 @@
 [build]
   publish = "frontend"
-  command = "echo 'Static site - no build required'"
+  command = "echo 'Frontend deployment'"
 
-# Handle client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
