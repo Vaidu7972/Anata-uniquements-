@@ -1,5 +1,26 @@
-const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_URL = isLocal ? 'http://localhost:3000/api' : '/api';
+// Backend selection: default to hosted, but prefer local if reachable.
+const LOCAL_BASE = 'http://localhost:3000/api';
+const HOSTED_BASE = 'https://anata-backend.onrender.com/api';
+let API_URL = HOSTED_BASE; // start with hosted backend to avoid waiting
+
+// Quick health check to detect a running local backend and switch to it if available.
+(async function detectLocalBackend() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 800);
+        const healthUrl = LOCAL_BASE.replace('/api', '') + '/api/health';
+        const res = await fetch(healthUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res && res.ok) {
+            API_URL = LOCAL_BASE;
+            console.info('API: using local backend at', API_URL);
+        } else {
+            console.info('API: falling back to hosted backend', HOSTED_BASE);
+        }
+    } catch (err) {
+        console.info('API: local backend not reachable, using hosted backend', HOSTED_BASE);
+    }
+})();
 
 // Utility: Show Alert
 function showAlert(message, type = 'danger', elementId = 'alertBox') {
