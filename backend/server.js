@@ -841,4 +841,26 @@ async function seedCourses() {
     }
 }
 
+// Auto-seed a default Admin user if none exists
+async function seedAdmin() {
+    try {
+        const adminCount = await User.countDocuments({ role: 'admin' });
+        if (adminCount === 0) {
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            await User.create({
+                name: 'System Admin',
+                email: 'admin@nexus.com',
+                password: hashedPassword,
+                phone: '000-000-0000',
+                role: 'admin',
+                status: 'active'
+            });
+            console.log('✅ Created default Admin account: admin@nexus.com | password: admin123');
+        }
+    } catch (err) {
+        console.error('Failed to seed admin:', err);
+    }
+}
+
 seedCourses();
+seedAdmin();
