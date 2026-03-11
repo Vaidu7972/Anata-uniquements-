@@ -11,6 +11,7 @@ const Skill = require('./models/Skill');
 const Wallet = require('./models/Wallet');
 const Course = require('./models/Course');
 const Trade = require('./models/Trade');
+const SkillValidation = require('./models/SkillValidation');
 
 // Lightweight message and review models (not present in models/ directory)
 const mongooseSchema = mongoose.Schema;
@@ -496,47 +497,301 @@ app.get('/api/users/discover', authenticateToken, async (req, res) => {
 
 
 
-app.get('/api/admin/users', authenticateToken, async (req, res) => {
+// =============================================
+// ADMIN API ENDPOINTS
+// =============================================
+const adminOnly = (req, res, next) => {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+    next();
+};
+
+// --- USER MANAGEMENT ---
+
+// GET all users (with skill data)
+app.get('/api/admin/users', authenticateToken, adminOnly, async (req, res) => {
     try {
-        const users = await User.find().select('name email role createdAt');
-        res.json(users);
+        const { search, role, sort } = req.query;
+        let query = {};
+        if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }];
+        if (role && role !== 'all') query.role = role;
+        let sortObj = { createdAt: -1 };
+        if (sort === 'name') sortObj = { name: 1 };
+        if (sort === 'email') sortObj = { email: 1 };
+        const users = await User.find(query).select('-password').sort(sortObj);
+        // Attach skill grade summary
+        const enriched = await Promise.all(users.map(async u => {
+            const skills = await Skill.find({ user: u._id });
+            const gradeMap = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+            const bestGrade = skills.length
+                ? skills.reduce((best, s) => (gradeMap[s.skill_grade] > gradeMap[best] ? s.skill_grade : best), 'E')
+                : 'N/A';
+            return { ...u.toObject(), skillGrade: bestGrade, skillCount: skills.length };
+        }));
+        res.json(enriched);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Failed to fetch users.' });
     }
 });
 
-app.post('/api/admin/courses', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+// GET single user
+app.get('/api/admin/users/:id', authenticateToken, adminOnly, async (req, res) => {
     try {
-        const { course_name, description, coin_price } = req.body;
-        await Course.create({ course_name, description, coin_price });
+        const user = await User.findById(req.params.id).select('-password');
+        if (!user) return res.status(404).json({ error: 'User not found.' });
+        const skills = await Skill.find({ user: req.params.id });
+        res.json({ ...user.toObject(), skills });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch user.' });
+    }
+});
+
+// PUT update user (role, name, email, status)
+app.put('/api/admin/users/:id', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const { name, email, role, status } = req.body;
+        const update = {};
+        if (name) update.name = name;
+        if (email) update.email = email;
+        if (role) update.role = role;
+        if (status !== undefined) update.status = status;
+        const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).select('-password');
+        if (!user) return res.status(404).json({ error: 'User not found.' });
+        res.json({ message: 'User updated successfully.', user });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update user.' });
+    }
+});
+
+// DELETE user
+app.delete('/api/admin/users/:id', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found.' });
+        // cascade delete skills and wallet
+        await Skill.deleteMany({ user: req.params.id });
+        await Wallet.deleteOne({ user: req.params.id });
+        res.json({ message: 'User deleted successfully.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete user.' });
+    }
+});
+
+// PUT update user skill grade
+app.put('/api/admin/users/:id/skill-grade', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const { skillId, newGrade } = req.body;
+        const skill = await Skill.findById(skillId);
+        if (!skill) return res.status(404).json({ error: 'Skill not found.' });
+        const previousGrade = skill.skill_grade;
+        skill.skill_grade = newGrade;
+        await skill.save();
+        await SkillValidation.create({
+            userId: req.params.id,
+            skillId,
+            previousGrade,
+            newGrade,
+            validatedBy: req.user.userId
+        });
+        res.json({ message: 'Skill grade updated and history recorded.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update skill grade.' });
+    }
+});
+
+// GET skill validation history for a user
+app.get('/api/admin/users/:id/skill-history', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const history = await SkillValidation.find({ userId: req.params.id })
+            .populate('skillId', 'skill_name')
+            .populate('validatedBy', 'name')
+            .sort({ validatedAt: -1 });
+        res.json(history);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch skill history.' });
+    }
+});
+
+// --- COURSE MANAGEMENT ---
+
+// GET all courses
+app.get('/api/admin/courses', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const courses = await Course.find().sort({ createdAt: -1 });
+        res.json(courses);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch courses.' });
+    }
+});
+
+// POST create course
+app.post('/api/admin/courses', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const { course_name, description, coin_price, category, instructor } = req.body;
+        await Course.create({ course_name, description, coin_price, category, instructor });
         res.status(201).json({ message: 'Course created successfully!' });
     } catch (err) {
         res.status(500).json({ error: 'Failed to create course.' });
     }
 });
 
-app.put('/api/admin/skills/:id/validate', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+// PUT update course
+app.put('/api/admin/courses/:id', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const { course_name, description, coin_price, category, instructor } = req.body;
+        const course = await Course.findByIdAndUpdate(
+            req.params.id,
+            { course_name, description, coin_price, category, instructor },
+            { new: true }
+        );
+        if (!course) return res.status(404).json({ error: 'Course not found.' });
+        res.json({ message: 'Course updated successfully.', course });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update course.' });
+    }
+});
+
+// DELETE course
+app.delete('/api/admin/courses/:id', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const course = await Course.findByIdAndDelete(req.params.id);
+        if (!course) return res.status(404).json({ error: 'Course not found.' });
+        res.json({ message: 'Course deleted successfully.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete course.' });
+    }
+});
+
+// --- SKILL VALIDATION (legacy route, kept for compatibility) ---
+app.put('/api/admin/skills/:id/validate', authenticateToken, adminOnly, async (req, res) => {
     try {
         const skillId = req.params.id;
         const { new_grade } = req.body;
-        const skill = await Skill.findByIdAndUpdate(skillId, { skill_grade: new_grade });
+        const skill = await Skill.findById(skillId);
         if (!skill) return res.status(404).json({ error: 'Skill not found.' });
+        const previousGrade = skill.skill_grade;
+        skill.skill_grade = new_grade;
+        await skill.save();
+        await SkillValidation.create({
+            userId: skill.user,
+            skillId,
+            previousGrade,
+            newGrade: new_grade,
+            validatedBy: req.user.userId
+        });
         res.json({ message: 'Skill validated and grade updated.' });
     } catch (err) {
         res.status(500).json({ error: 'Failed to validate skill.' });
     }
 });
 
-app.get('/api/admin/trades', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+// GET all skills (for skill validation panel)
+app.get('/api/admin/skills', authenticateToken, adminOnly, async (req, res) => {
     try {
-        const trades = await Trade.find().sort({ createdAt: -1 });
+        const { search, grade } = req.query;
+        let query = {};
+        if (search) query.skill_name = { $regex: search, $options: 'i' };
+        if (grade && grade !== 'all') query.skill_grade = grade;
+        const skills = await Skill.find(query)
+            .populate('user', 'name email')
+            .sort({ skill_name: 1 });
+        res.json(skills);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch skills.' });
+    }
+});
+
+// GET all trades for admin
+app.get('/api/admin/trades', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const trades = await Trade.find()
+            .populate('requester', 'name email')
+            .populate('receiver', 'name email')
+            .sort({ createdAt: -1 });
         res.json(trades);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch all trades.' });
+    }
+});
+
+// --- ANALYTICS OVERVIEW ---
+app.get('/api/admin/analytics/overview', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const totalCourses = await Course.countDocuments();
+        const totalTrades = await Trade.countDocuments();
+        const completedTrades = await Trade.countDocuments({ status: 'completed' });
+        const pendingTrades = await Trade.countDocuments({ status: 'pending' });
+
+        // Grade distribution across all skills
+        const gradeAgg = await Skill.aggregate([
+            { $group: { _id: '$skill_grade', count: { $sum: 1 } } }
+        ]);
+        const gradeDistribution = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+        gradeAgg.forEach(g => { if (g._id) gradeDistribution[g._id] = g.count; });
+
+        // Role distribution
+        const roleAgg = await User.aggregate([
+            { $group: { _id: '$role', count: { $sum: 1 } } }
+        ]);
+        const roleDistribution = {};
+        roleAgg.forEach(r => { roleDistribution[r._id || 'unknown'] = r.count; });
+
+        // Trade status distribution
+        const tradeStatusAgg = await Trade.aggregate([
+            { $group: { _id: '$status', count: { $sum: 1 } } }
+        ]);
+        const tradeStatus = {};
+        tradeStatusAgg.forEach(t => { tradeStatus[t._id] = t.count; });
+
+        // User growth - last 7 months
+        const now = new Date();
+        const userGrowth = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+            const count = await User.countDocuments({ createdAt: { $gte: d, $lt: end } });
+            userGrowth.push({
+                month: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+                count
+            });
+        }
+
+        // Trade activity - last 7 months
+        const tradeActivity = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+            const count = await Trade.countDocuments({ createdAt: { $gte: d, $lt: end } });
+            tradeActivity.push({
+                month: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+                count
+            });
+        }
+
+        // Top skills
+        const topSkills = await Skill.aggregate([
+            { $group: { _id: '$skill_name', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 5 }
+        ]);
+
+        res.json({
+            totalUsers,
+            totalCourses,
+            totalTrades,
+            completedTrades,
+            pendingTrades,
+            gradeDistribution,
+            roleDistribution,
+            tradeStatus,
+            userGrowth,
+            tradeActivity,
+            topSkills
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch analytics.' });
     }
 });
 
