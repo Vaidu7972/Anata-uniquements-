@@ -861,9 +861,9 @@ function renderChatHistory(logs) {
     }
 
     container.innerHTML = logs.map(msg => {
-        const isMe = msg.sender_id._id === user.id || msg.sender_id === user.id;
-        const senderName = isMe ? 'YOU' : (msg.sender_id.name || 'Unknown Node');
-        const receiverName = isMe ? (msg.receiver_id.name || 'Unknown Node') : 'YOU';
+        const isMe = msg.sender_id === user.id;
+        const senderName = isMe ? 'YOU' : (msg.sender_name || 'Unknown Node');
+        const receiverName = isMe ? (msg.receiver_name || 'Unknown Node') : 'YOU';
         const date = new Date(msg.created_at).toLocaleString();
         
         return `
