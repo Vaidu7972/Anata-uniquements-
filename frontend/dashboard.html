@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexGen Dashboard - Ananta Techtonic</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-dark text-light overflow-hidden">
+
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top shadow-sm z-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="dashboard.html">
+                <i class="fa-solid fa-layer-group text-accent me-2"></i>Ananta<span
+                    class="text-gradient">Techtonic</span>
+            </a>
+            <div class="d-flex align-items-center">
+                <div class="glass-panel px-3 py-1 rounded-pill me-3 d-flex align-items-center border-warning"
+                    style="background: rgba(245, 158, 11, 0.1);">
+                    <i class="fa-solid fa-coins text-warning me-2 animate-pulse"></i>
+                    <span id="navWalletBalance" class="fw-bold text-white font-monospace">0</span>
+                    <span class="text-muted ms-1 small">Coins</span>
+                </div>
+                <div class="dropdown">
+                    <button
+                        class="btn btn-outline-glow rounded-pill px-3 py-1 dropdown-toggle d-flex align-items-center"
+                        type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="bg-primary rounded-circle me-2 d-flex align-items-center justify-content-center"
+                            style="width: 28px; height: 28px;">
+                            <i class="fa-solid fa-user text-white small"></i>
+                        </div>
+                        <span id="navUserName" class="fw-bold text-white">User.Node</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end glass-panel mt-2 border-0 shadow-lg p-2"
+                        aria-labelledby="userMenu">
+                        <li><a class="dropdown-item text-light rounded hover-glow" href="#"
+                                onclick="showSection('profile', null)"><i
+                                    class="fa-solid fa-id-card w-20px me-2 text-accent"></i>Node Profile</a></li>
+                        <li>
+                            <hr class="dropdown-divider border-secondary opacity-25">
+                        </li>
+                        <li><a class="dropdown-item text-danger rounded hover-glow" href="#" id="logoutBtn"><i
+                                    class="fa-solid fa-power-off w-20px me-2"></i>Disconnect</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid h-100 p-0">
+        <div class="row g-0 h-100">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar shadow-sm h-100 z-2 position-relative"
+                style="max-height: calc(100vh - 66px); overflow-y: auto;">
+                <div class="position-sticky pt-4 px-3">
+                    <div class="text-uppercase text-muted fw-bold mb-3 small tracking-wide ms-2">Terminal Ops</div>
+                    <ul class="nav flex-column gap-2 mb-4">
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav active d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('dashboard', this)">
+                                <i class="fa-solid fa-gauge-high fa-fw me-3 text-accent transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Command Center</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('profile', this)">
+                                <i class="fa-solid fa-microchip fa-fw me-3 text-primary transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Hardware (Skills)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('matching', this)">
+                                <i class="fa-solid fa-network-wired fa-fw me-3 text-info transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Neural Network</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('discovery', this)">
+                                <i class="fa-solid fa-globe fa-fw me-3 text-accent transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Discovery</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('trades', this)">
+                                <i class="fa-solid fa-right-left fa-fw me-3 text-warning transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Active Protocols</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('wallet', this)">
+                                <i class="fa-solid fa-wallet fa-fw me-3 text-success transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Crypto Wallet</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showSection('courses', this)">
+                                <i class="fa-solid fa-graduation-cap fa-fw me-3 text-purple transition-all"></i> <span
+                                    class="fw-bold tracking-wide">Knowledge DB</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div id="adminNav" class="d-none">
+                        <div class="text-uppercase text-danger fw-bold mb-3 small tracking-wide ms-2">Root Access</div>
+                        <ul class="nav flex-column gap-2 mb-4">
+                            <li class="nav-item">
+                                <a class="nav-link dashboard-nav d-flex align-items-center py-3 px-3 border border-danger border-opacity-25"
+                                    style="background: rgba(239, 68, 68, 0.05);" href="#"
+                                    onclick="showSection('admin', this)">
+                                    <i class="fa-solid fa-lock-open fa-fw me-3 text-danger"></i> <span
+                                        class="fw-bold tracking-wide text-danger">Admin Override</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-5 py-5 position-relative overflow-y-auto"
+                style="height: calc(100vh - 66px);">
+
+                <!-- Background decorative elements -->
+                <div class="position-absolute top-0 end-0 opacity-10 pe-none"
+                    style="filter: blur(80px); right: -100px; top: -100px;">
+                    <div style="width: 400px; height: 400px; background: var(--primary-color); border-radius: 50%;">
+                    </div>
+                </div>
+
+                <div id="alertBoxDash" class="alert d-none shadow-lg border-0 rounded-4" role="alert"></div>
+
+                <!-- SECTION: DASHBOARD -->
+                <div id="section-dashboard" class="content-section position-relative z-1">
+                    <div
+                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-3 mb-5 border-bottom border-secondary border-opacity-25">
+                        <h1 class="h2 fw-bold text-white m-0">System <span class="text-gradient">Diagnostics</span></h1>
+                        <span class="badge bg-primary-glow font-monospace">Status: Online</span>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-4">
+                            <div class="dash-metric-card p-4 h-100 d-flex flex-column justify-content-center border-warning border-opacity-25"
+                                style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(245, 158, 11, 0.1) 100%);">
+                                <i class="fa-solid fa-coins dash-metric-icon text-warning"></i>
+                                <h6 class="text-warning text-uppercase fw-bold tracking-wide mb-2 opacity-75">Treasury
+                                    Balance</h6>
+                                <h1 class="display-4 fw-bold text-white mb-0 font-monospace" id="dashTotalCoins">0</h1>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="dash-metric-card p-4 h-100 d-flex flex-column justify-content-center border-success border-opacity-25"
+                                style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(16, 185, 129, 0.1) 100%);">
+                                <i class="fa-solid fa-check-double dash-metric-icon text-success"></i>
+                                <h6 class="text-success text-uppercase fw-bold tracking-wide mb-2 opacity-75">Protocols
+                                    Executed</h6>
+                                <h1 class="display-4 fw-bold text-white mb-0 font-monospace" id="dashCompletedTrades">0
+                                </h1>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="dash-metric-card p-4 h-100 d-flex flex-column justify-content-center border-info border-opacity-25"
+                                style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(6, 182, 212, 0.1) 100%);">
+                                <i class="fa-solid fa-hourglass-half dash-metric-icon text-info"></i>
+                                <h6 class="text-info text-uppercase fw-bold tracking-wide mb-2 opacity-75">Pending
+                                    Authentications</h6>
+                                <h1 class="display-4 fw-bold text-white mb-0 font-monospace" id="dashPendingTrades">0
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="glass-panel p-5 text-center position-relative overflow-hidden">
+                                <div class="position-absolute top-50 start-50 translate-middle w-100 h-100 opacity-25"
+                                    style="background: radial-gradient(circle, var(--accent-color) 0%, transparent 60%); z-index: 0; pointer-events: none;">
+                                </div>
+                                <div class="position-relative z-1">
+                                    <div
+                                        class="d-inline-block bg-dark rounded-circle p-4 shadow mb-4 border border-secondary">
+                                        <i class="fa-solid fa-radar fa-3x text-accent fa-spin-pulse"></i>
+                                    </div>
+                                    <h2 class="fw-bold text-white mb-3">Initialize Scan Sequence</h2>
+                                    <p class="text-muted mb-4 max-w-xl mx-auto fs-5">Engage the Neural Network to
+                                        discover compatible nodes. Barter your hardware capabilities for the expertise
+                                        you require.</p>
+                                    <button class="btn btn-accent btn-lg rounded-pill px-5 py-3 fw-bold"
+                                        onclick="showSection('matching', null)">
+                                        <i class="fa-solid fa-satellite-dish me-2"></i> Scan Network
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: PROFILE & SKILLS -->
+                <div id="section-profile" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between align-items-center pb-3 mb-5 border-bottom border-secondary border-opacity-25">
+                        <h2 class="fw-bold text-white m-0">Node <span class="text-gradient">Hardware Config</span></h2>
+                    </div>
+
+                    <div class="row g-5">
+                        <div class="col-md-4">
+                            <div
+                                class="glass-card position-relative overflow-hidden text-center p-5 border-primary border-opacity-25 h-100">
+                                <div class="position-absolute top-0 start-0 w-100 h-100 opacity-10"
+                                    style="background: linear-gradient(180deg, var(--primary-color) 0%, transparent 100%);">
+                                </div>
+                                <div class="position-relative z-1">
+                                    <div class="bg-dark rounded-circle d-inline-flex align-items-center justify-content-center mb-4 border border-secondary shadow-lg"
+                                        style="width: 100px; height: 100px; font-size: 2.5rem; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                                        <i class="fa-solid fa-user-astronaut text-primary"></i>
+                                    </div>
+                                    <h3 class="fw-bold text-white mb-1 tracking-wide" id="profileName">Loading...</h3>
+                                    <p class="text-muted mb-4 font-monospace small" id="profileEmail">sys_wait_signal
+                                    </p>
+                                    <span class="badge bg-primary-glow font-monospace d-inline-block p-2"
+                                        id="profileRole">NODE</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="glass-card p-4 p-lg-5 h-100">
+                                <h4
+                                    class="fw-bold text-white border-bottom border-secondary border-opacity-25 pb-3 mb-4">
+                                    Install New Capability</h4>
+                                <form id="addSkillForm" class="mb-5">
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-md-4">
+                                            <label
+                                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Capability
+                                                Name</label>
+                                            <input type="text" id="skillName"
+                                                class="form-control bg-dark border-secondary text-white" required
+                                                placeholder="e.g. Quantum Computing">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label
+                                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Protocol
+                                                Type</label>
+                                            <select id="skillType"
+                                                class="form-select bg-dark border-secondary text-white">
+                                                <option value="offered">I Offer (TX)</option>
+                                                <option value="required">I Need (RX)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label
+                                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Power
+                                                Level</label>
+                                            <select id="skillGrade"
+                                                class="form-select bg-dark border-secondary text-white">
+                                                <option value="A">Class S/A (Expert)</option>
+                                                <option value="B">Class A/B (Adv)</option>
+                                                <option value="C" selected>Class C (Inter)</option>
+                                                <option value="D">Class D (Beg)</option>
+                                                <option value="E">Class E (Base)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2"><i
+                                                    class="fa-solid fa-download me-2"></i>Install</button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <h5
+                                    class="fw-bold text-white border-bottom border-secondary border-opacity-25 pb-2 mb-3">
+                                    Capabilities Matrix</h5>
+                                <div
+                                    class="table-responsive rounded-4 overflow-hidden border border-secondary border-opacity-25">
+                                    <table class="table table-hover align-middle mb-0 bg-dark bg-opacity-50">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th
+                                                    class="bg-dark text-muted fw-bold border-bottom border-secondary border-opacity-50">
+                                                    Capability Id</th>
+                                                <th
+                                                    class="bg-dark text-muted fw-bold border-bottom border-secondary border-opacity-50">
+                                                    I/O State</th>
+                                                <th
+                                                    class="bg-dark text-muted fw-bold border-bottom border-secondary border-opacity-50 text-center">
+                                                    Power Class</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="skillsTableBody">
+                                            <!-- Skills populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: MATCHING -->
+                <div id="section-matching" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between align-items-center pb-3 mb-5 border-bottom border-secondary border-opacity-25">
+                        <h2 class="fw-bold text-white m-0">Neural <span class="text-gradient">Network Search</span></h2>
+                        <button class="btn btn-outline-glow rounded-pill" onclick="loadMatches()">
+                            <i class="fa-solid fa-satellite-dish fa-pulse me-2"></i> Re-Scan
+                        </button>
+                    </div>
+
+                    <div class="glass-panel p-4 mb-5 border-info border-opacity-25">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-circle-info fa-2x text-info me-3"></i>
+                            <p class="mb-0 text-light fw-bold fs-5">System parsing capabilities <span
+                                    class="text-info">Needed</span> by your Node against global <span
+                                    class="text-warning">Offered</span> databases. Evaluating compatibility classes.</p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4" id="matchesContainer">
+                        <!-- Matches loaded dynamically -->
+                        <div class="col-12 text-center py-5">
+                            <div class="spinner-grow text-accent" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Scanning...</span>
+                            </div>
+                            <h4 class="mt-4 text-muted fw-bold tracking-wide animate-pulse">Scanning Grid Coordinates...
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: DISCOVERY -->
+                <div id="section-discovery" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between align-items-center pb-3 mb-5 border-bottom border-secondary border-opacity-25">
+                        <h2 class="fw-bold text-white m-0">Global <span class="text-gradient">Node Array</span></h2>
+                        <button class="btn btn-outline-glow rounded-pill" onclick="loadDiscovery()">
+                            <i class="fa-solid fa-sync fa-spin-hover me-2"></i> Refresh Data
+                        </button>
+                    </div>
+
+                    <div class="row g-4" id="discoveryContainer">
+                        <!-- Discovery nodes loaded here -->
+                    </div>
+                </div>
+
+                <!-- SECTION: TRADES -->
+                <div id="section-trades" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom border-secondary border-opacity-25">
+                        <h2 class="fw-bold text-white m-0">Active <span class="text-gradient">Protocols</span></h2>
+                    </div>
+
+                    <ul class="nav nav-pills mb-5 p-1 glass-panel d-inline-flex rounded-pill" id="tradeTabs"
+                        role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill px-4 text-white fw-bold" id="pending-tab"
+                                data-bs-toggle="pill" data-bs-target="#pending-trades" type="button" role="tab">Awaiting
+                                Handshake</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill px-4 text-white fw-bold" id="all-tab"
+                                data-bs-toggle="pill" data-bs-target="#all-trades" type="button" role="tab">All
+                                Executions</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="tradeTabsContent">
+                        <div class="tab-pane fade show active" id="pending-trades" role="tabpanel">
+                            <div class="row g-4" id="pendingTradesContainer">
+                                <!-- Pending trades loaded here -->
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="all-trades" role="tabpanel">
+                            <div class="glass-card p-0 overflow-hidden border-secondary border-opacity-25">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0 text-light bg-transparent">
+                                        <thead
+                                            class="bg-dark bg-opacity-50 border-bottom border-secondary border-opacity-25">
+                                            <tr>
+                                                <th class="py-3 px-4 text-muted fw-bold tracking-wide">Protocol Hash
+                                                </th>
+                                                <th class="py-3 px-4 text-muted fw-bold tracking-wide">Target Node</th>
+                                                <th class="py-3 px-4 text-muted fw-bold tracking-wide">Data Exchanged
+                                                </th>
+                                                <th class="py-3 px-4 text-muted fw-bold tracking-wide text-center">State
+                                                    Matrix</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="allTradesTableBody" class="border-top-0">
+                                            <!-- All trades list -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: WALLET -->
+                <div id="section-wallet" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between align-items-center pb-3 mb-5 border-bottom border-secondary border-opacity-25">
+                        <h2 class="fw-bold text-white m-0">Cryptographic <span class="text-gradient">Wallet</span></h2>
+                    </div>
+
+                    <div class="row justify-content-center">
+                        <div class="col-lg-10">
+                            <!-- Main Wallet Card -->
+                            <div class="glass-panel position-relative overflow-hidden rounded-4 mb-5 border-warning border-opacity-50"
+                                style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(245, 158, 11, 0.1) 100%);">
+                                <div class="position-absolute end-0 top-0 opacity-10 p-4"
+                                    style="transform: rotate(15deg) scale(1.5); right: -20px; top: -30px;">
+                                    <i class="fa-brands fa-bitcoin fa-10x"></i>
+                                </div>
+                                <div
+                                    class="p-5 position-relative z-1 d-md-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h5
+                                            class="text-warning text-uppercase fw-bold tracking-wide mb-2 opacity-75 d-flex align-items-center">
+                                            <i class="fa-solid fa-shield-halved me-2"></i> Current Treasury Balance
+                                        </h5>
+                                        <h1 class="display-1 fw-bold text-white mb-0 font-monospace d-flex align-items-center"
+                                            style="letter-spacing: -2px;">
+                                            <i class="fa-solid fa-coins text-warning me-3"></i> <span
+                                                id="walletMainBalance">0</span>.00
+                                        </h1>
+                                        <p class="text-muted mt-2 mb-0 fw-bold font-monospace opacity-50">NODE_ASSET //
+                                            VIRTUAL_COIN_PROTOCOL</p>
+                                    </div>
+                                    <div
+                                        class="mt-4 mt-md-0 ms-md-5 ps-md-5 border-md-start border-secondary border-opacity-25">
+                                        <div class="mb-4">
+                                            <p class="text-success text-uppercase small fw-bold tracking-wide mb-1"><i
+                                                    class="fa-solid fa-arrow-trend-up me-2"></i>Total Yield</p>
+                                            <h2 class="text-white fw-bold font-monospace mb-0" id="walletEarned">0</h2>
+                                        </div>
+                                        <div>
+                                            <p class="text-danger text-uppercase small fw-bold tracking-wide mb-1"><i
+                                                    class="fa-solid fa-arrow-trend-down me-2"></i>Total Expenditure</p>
+                                            <h2 class="text-white fw-bold font-monospace mb-0" id="walletUsed">0</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: COURSE STORE -->
+                <div id="section-courses" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between flex-wrap align-items-center pb-3 mb-4 border-bottom border-secondary border-opacity-25">
+                        <h2 class="fw-bold text-white m-0">Knowledge <span class="text-gradient">Database</span></h2>
+                    </div>
+
+                    <div
+                        class="glass-panel p-4 mb-5 border-purple border-opacity-25 d-flex align-items-center justify-content-between flex-wrap">
+                        <div class="d-flex align-items-center mb-3 mb-md-0">
+                            <i class="fa-solid fa-graduation-cap fa-2x text-purple me-3" style="color: #a855f7;"></i>
+                            <p class="mb-0 text-light fw-bold fs-5">Upload new cognitive modules directly to your Node
+                                using Virtual Coins.</p>
+                        </div>
+                        <div class="bg-dark rounded-pill px-4 py-2 border border-warning border-opacity-50">
+                            <span class="text-muted fw-bold me-2">Available Hash:</span> <span
+                                class="font-monospace text-warning fw-bold fs-5" id="storeWalletBal">0</span> <i
+                                class="fa-solid fa-coins text-warning small"></i>
+                        </div>
+                    </div>
+
+                    <div class="row g-4" id="coursesContainer">
+                        <!-- Courses populated here -->
+                        <div class="col-12 text-center py-5">
+                            <div class="spinner-grow text-purple" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Loading Modules...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: ADMIN PANEL -->
+                <div id="section-admin" class="content-section d-none">
+                    <div
+                        class="d-flex justify-content-between align-items-center pb-3 mb-5 border-bottom border-danger border-opacity-50">
+                        <h2 class="fw-bold text-danger m-0 border-danger"><i class="fa-solid fa-server me-3"></i>Root
+                            Server <span class="text-white">Admin Override</span></h2>
+                        <span
+                            class="badge bg-danger text-uppercase tracking-wide px-3 py-2 fw-bold animate-pulse">Classified
+                            Access</span>
+                    </div>
+
+                    <div class="row g-5">
+                        <div class="col-xl-4">
+                            <div
+                                class="glass-card border-danger border-opacity-50 pos-relative overflow-hidden p-0 h-100 shadow-lg">
+                                <div
+                                    class="bg-danger bg-opacity-10 px-4 py-3 border-bottom border-danger border-opacity-25 d-flex align-items-center">
+                                    <i class="fa-solid fa-upload text-danger me-2"></i>
+                                    <h5 class="fw-bold text-white mb-0">Inject Module to DB</h5>
+                                </div>
+                                <div class="p-4">
+                                    <form id="addCourseForm" class="d-flex flex-column gap-3">
+                                        <div>
+                                            <label
+                                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Module
+                                                Designation</label>
+                                            <input type="text"
+                                                class="form-control bg-dark border-secondary text-white focus-ring-danger"
+                                                id="adminCourseName" required
+                                                placeholder="e.g. Advanced AI Subroutines">
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Coin
+                                                Hash Cost</label>
+                                            <input type="number"
+                                                class="form-control bg-dark border-secondary text-white font-monospace"
+                                                id="adminCoursePrice" required placeholder="100">
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="form-label text-muted small text-uppercase tracking-wide fw-bold">Parameters
+                                                / Data</label>
+                                            <textarea class="form-control bg-dark border-secondary text-white"
+                                                id="adminCourseDesc" rows="3"
+                                                placeholder="Description of the neuro-package..."></textarea>
+                                        </div>
+                                        <div class="mt-2 text-end">
+                                            <button type="submit"
+                                                class="btn btn-danger fw-bold w-100 py-2 text-uppercase tracking-wide"><i
+                                                    class="fa-solid fa-bolt me-2"></i>Execute Upload</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-8">
+                            <div
+                                class="glass-card border-secondary border-opacity-25 p-0 overflow-hidden shadow-lg h-100">
+                                <div
+                                    class="bg-dark bg-opacity-50 px-4 py-3 border-bottom border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                                    <h5 class="fw-bold text-white mb-0"><i
+                                            class="fa-solid fa-users-viewfinder text-info me-2"></i>Connected Nodes
+                                        Array</h5>
+                                    <button class="btn btn-sm btn-outline-info rounded-pill"
+                                        onclick="loadAdminUsers()"><i class="fa-solid fa-rotate me-2"></i>Ping
+                                        Network</button>
+                                </div>
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                    <table class="table table-hover table-dark table-striped align-middle mb-0">
+                                        <thead class="position-sticky top-0 bg-dark z-1 shadow-sm">
+                                            <tr>
+                                                <th
+                                                    class="py-3 px-4 text-info fw-bold tracking-wide small text-uppercase">
+                                                    Node Hash ID</th>
+                                                <th
+                                                    class="py-3 px-4 text-info fw-bold tracking-wide small text-uppercase">
+                                                    Designation</th>
+                                                <th
+                                                    class="py-3 px-4 text-info fw-bold tracking-wide small text-uppercase">
+                                                    Nexus Auth</th>
+                                                <th
+                                                    class="py-3 px-4 text-info fw-bold tracking-wide small text-uppercase text-center">
+                                                    Class</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="adminUsersTableBody" class="font-monospace small">
+                                            <!-- Admin users rendered here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Trade Request Modal -->
+    <div class="modal fade" id="requestTradeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-accent border-opacity-50 shadow-lg">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3"
+                    style="background: rgba(0, 206, 201, 0.1);">
+                    <h5 class="modal-title fw-bold text-white"><i
+                            class="fa-solid fa-handshake-angle text-accent me-2"></i>Initiate Protocol Handshake</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 p-md-5 bg-dark bg-opacity-75">
+                    <div class="alert bg-dark border border-secondary text-light mb-4 text-center">
+                        <p class="mb-0">Establishing link to <strong class="text-accent fs-5 mx-1"
+                                id="tradePartnerName">Partner</strong></p>
+                        <hr class="border-secondary my-2">
+                        <p class="mb-0 small text-muted text-uppercase tracking-wide">Target Capability: <strong
+                                class="text-white fs-6" id="tradeSkillName">Skill</strong></p>
+                    </div>
+
+                    <form id="tradeReqForm">
+                        <input type="hidden" id="tradePartnerId">
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase tracking-wide fw-bold">Transfer
+                                Terms Matrix</label>
+                            <textarea class="form-control bg-dark border-secondary text-white shadow-inner"
+                                id="tradeDetails" rows="4"
+                                placeholder="Transmit logic of exchange... E.g: I compile the frontend vectors, you optimize the backup database."
+                                required></textarea>
+                        </div>
+                        <div class="d-grid mt-4">
+                            <button type="submit"
+                                class="btn btn-accent btn-lg text-dark fw-bold rounded-pill text-uppercase tracking-wide py-3">
+                                <i class="fa-solid fa-satellite-dish fa-fade me-2"></i> Transmit Request Array
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete Trade Modal -->
+    <div class="modal fade" id="completeTradeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-success border-opacity-50 shadow-lg">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3"
+                    style="background: rgba(16, 185, 129, 0.1);">
+                    <h5 class="modal-title fw-bold text-white"><i
+                            class="fa-solid fa-square-check text-success me-2"></i>Finalize Protocol & Distribute Yield
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 p-md-5 bg-dark bg-opacity-75">
+                    <form id="completeTradeForm">
+                        <input type="hidden" id="completeTradeId">
+
+                        <div class="glass-panel p-4 mb-4 border-secondary border-opacity-25">
+                            <div class="mb-4">
+                                <label class="form-label text-muted small text-uppercase tracking-wide fw-bold">Cycle
+                                    Duration (Standard Days)</label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-dark border-secondary text-muted"><i
+                                            class="fa-solid fa-clock"></i></span>
+                                    <input type="number"
+                                        class="form-control bg-dark border-start-0 border-secondary text-white font-monospace fs-4"
+                                        id="tradeDuration" min="1" value="1" required>
+                                </div>
+                                <div class="form-text text-warning font-monospace mt-2"><i
+                                        class="fa-solid fa-bolt text-warning me-1"></i> Conversion: 1 Cycle = 5 Coins
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label text-muted small text-uppercase tracking-wide fw-bold">Power
+                                    Output Evaluated (Grade)</label>
+                                <select class="form-select form-select-lg bg-dark border-secondary text-white"
+                                    id="tradeFinalGrade" required>
+                                    <option value="A">S/A - Maximum Output (+20 Hashes)</option>
+                                    <option value="B">A/B - High Output (+15 Hashes)</option>
+                                    <option value="C" selected>C - Stable Output (+10 Hashes)</option>
+                                    <option value="D">D - Low Output (+5 Hashes)</option>
+                                    <option value="E">E - Base Output (+2 Hashes)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label text-muted small text-uppercase tracking-wide fw-bold">Node
+                                    Sync Quality (Satisfaction)</label>
+                                <select class="form-select form-select-lg bg-dark border-secondary text-white"
+                                    id="tradeSatisfaction" required>
+                                    <option value="Excellent">Flawless execution (+10 Hashes)</option>
+                                    <option value="Good" selected>Nominal execution (+5 Hashes)</option>
+                                    <option value="Average">Acceptable latency (+2 Hashes)</option>
+                                    <option value="Poor">Critical packet loss (+0 Hashes)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit"
+                                class="btn btn-success btn-lg fw-bold rounded-pill text-uppercase tracking-wide py-3 shadow-lg hover-glow-success">
+                                <i class="fa-solid fa-lock-open me-2"></i> Approve End-State & Mint Coins
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Modal -->
+    <div class="modal fade" id="chatModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card border-accent border-opacity-50 shadow-lg">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3"
+                    style="background: rgba(0, 206, 201, 0.1);">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-comments text-accent me-3 fa-lg"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold text-white mb-0">Secure Node Communication</h5>
+                            <small class="text-muted font-monospace" id="chatChannelInfo">CHANNEL_ID: 0x00</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0 d-flex flex-column bg-dark" style="height: 500px;">
+                    <!-- Message Log -->
+                    <div id="messageLog" class="flex-grow-1 p-4 overflow-y-auto d-flex flex-column gap-3"
+                        style="background: radial-gradient(circle at center, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 1) 100%);">
+                        <!-- Messages populated here -->
+                    </div>
+
+                    <!-- Message Input -->
+                    <div class="p-3 border-top border-secondary border-opacity-25 bg-dark bg-opacity-75">
+                        <form id="sendMessageForm" class="d-flex gap-2">
+                            <input type="hidden" id="chatTradeId">
+                            <input type="text" id="messageInput"
+                                class="form-control bg-dark border-secondary text-white font-monospace"
+                                placeholder="Transmit message packet..." autocomplete="off" required>
+                            <button type="submit" class="btn btn-accent px-4 py-2 fw-bold text-dark">
+                                <i class="fa-solid fa-paper-plane me-2"></i>Send
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-info border-opacity-50 shadow-lg">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3"
+                    style="background: rgba(6, 182, 212, 0.1);">
+                    <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-star text-info me-2"></i>Evaluate
+                        Node Sync</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 p-md-5 bg-dark bg-opacity-75">
+                    <form id="reviewForm">
+                        <input type="hidden" id="reviewTradeId">
+
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase tracking-wide fw-bold">Current
+                                Rating (1-5)</label>
+                            <input type="number" class="form-control bg-dark border-secondary text-white font-monospace"
+                                id="reviewRating" min="1" max="5" value="5" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase tracking-wide fw-bold">Feedback /
+                                Comments</label>
+                            <textarea class="form-control bg-dark border-secondary text-white" id="reviewComment"
+                                rows="3" placeholder="How was the execution?" required></textarea>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit"
+                                class="btn btn-info fw-bold rounded-pill text-uppercase tracking-wide py-3">
+                                Submit Feedback Logs
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & App JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        // Check Auth immediately on dashboard load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('token')) {
+                window.location.href = 'login.html';
+            } else {
+                initDashboard();
+            }
+        });
+    </script>
+</body>
+
+</html>
