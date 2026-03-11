@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const coinTransactionSchema = new mongoose.Schema({
     sender_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // null if system
-    receiver_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    receiver_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     amount: { type: Number, required: true },
     transaction_type: { type: String, enum: ['swap_reward', 'course_purchase', 'transfer', 'bonus'], required: true },
     reference_id: { type: mongoose.Schema.Types.ObjectId }, // e.g. Trade ID or Course ID

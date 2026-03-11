@@ -119,15 +119,20 @@ async function seed() {
             const isCompleted = Math.random() > 0.3;
             const tradeDate = new Date(Date.now() - Math.floor(Math.random() * 45) * 24 * 60 * 60 * 1000);
             
-            const trade = await Trade.create({
+            const tradeData = {
                 requester: user._id,
                 receiver: partner._id,
                 skills_exchanged: 'Simulated Skill ↔ Partner Skill',
                 status: isCompleted ? 'completed' : 'pending',
-                duration_days: isCompleted ? (2 + Math.floor(Math.random() * 10)) : null,
-                satisfaction: isCompleted ? ['Excellent', 'Good', 'Average'][Math.floor(Math.random() * 3)] : null,
                 createdAt: tradeDate
-            });
+            };
+
+            if (isCompleted) {
+                tradeData.duration_days = 2 + Math.floor(Math.random() * 10);
+                tradeData.satisfaction = ['Excellent', 'Good', 'Average'][Math.floor(Math.random() * 3)];
+            }
+
+            const trade = await Trade.create(tradeData);
 
             if (isCompleted) {
                 // Add coin transaction for completion

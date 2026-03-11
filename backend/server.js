@@ -622,23 +622,11 @@ app.get('/api/chat/history', authenticateToken, async (req, res) => {
     }
 });
 
-// GET my courses status
+// GET my redemptions
 app.get('/api/my-courses', authenticateToken, async (req, res) => {
     try {
-        const allCourses = await Course.find();
         const userCourses = await UserCourse.find({ user_id: req.user.userId });
-        
-        const redeemedIds = userCourses.map(uc => uc.course_id.toString());
-        
-        const mapped = allCourses.map(c => {
-            const isRedeemed = redeemedIds.includes(c._id.toString());
-            return {
-                ...c.toObject(),
-                status: isRedeemed ? 'Accessible Now' : 'Locked'
-            };
-        });
-        
-        res.json(mapped);
+        res.json(userCourses);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch course status.' });
     }
