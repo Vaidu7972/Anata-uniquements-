@@ -12,6 +12,52 @@ const Wallet = require('./models/Wallet');
 const Course = require('./models/Course');
 const Trade = require('./models/Trade');
 const SkillValidation = require('./models/SkillValidation');
+const ActivityLog = require('./models/ActivityLog');
+const ChatMessage = require('./models/ChatMessage');
+const UserAchievement = require('./models/UserAchievement');
+const CoinTransaction = require('./models/CoinTransaction');
+const UserCourse = require('./models/UserCourse');
+
+const crypto = require('crypto');
+const ENCRYPTION_KEY = (process.env.ENCRYPTION_KEY || 'ananta_techtonic_secret_32bytes_!!').substring(0, 32).padEnd(32, '0');
+const IV_LENGTH = 16;
+
+function encrypt(text) {
+    try {
+        let iv = crypto.randomBytes(IV_LENGTH);
+        let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
+        let encrypted = cipher.update(text);
+        encrypted = Buffer.concat([encrypted, cipher.final()]);
+        return iv.toString('hex') + ':' + encrypted.toString('hex');
+    } catch (e) {
+        console.error('Encryption error:', e);
+        return text;
+    }
+}
+
+function decrypt(text) {
+    try {
+        let textParts = text.split(':');
+        if (textParts.length < 2) return text;
+        let iv = Buffer.from(textParts.shift(), 'hex');
+        let encryptedText = Buffer.from(textParts.join(':'), 'hex');
+        let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
+        let decrypted = decipher.update(encryptedText);
+        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        return decrypted.toString();
+    } catch (e) {
+        console.error('Decryption error:', e);
+        return text;
+    }
+}
+
+async function logActivity(userId, actionType, description, metadata = {}) {
+    try {
+        await ActivityLog.create({ user_id: userId, action_type: actionType, description, metadata });
+    } catch (err) {
+        console.error('Failed to log activity:', err);
+    }
+}
 
 // Lightweight message and review models (not present in models/ directory)
 const mongooseSchema = mongoose.Schema;
@@ -107,6 +153,8 @@ app.post('/api/login', async (req, res) => {
         if (!isMatch) return res.status(401).json({ message: 'Invalid credentials!' });
 
         const token = jwt.sign({ userId: user._id.toString(), role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+
+        await logActivity(user._id, 'login', `User ${user.name} logged in`);
 
         res.json({ message: 'Login successful!', token, user: { id: user._id, name: user.name, role: user.role } });
     } catch (err) {
@@ -334,7 +382,46 @@ app.put('/api/trades/:id/complete', authenticateToken, async (req, res) => {
         if (!trade) return res.status(400).json({ error: 'Trade cannot be completed. It might not be accepted yet or already completed.' });
 
         const t = trade;
+        // Atomic transaction simulation (using Mongoose updateMany but adding history)
         await Wallet.updateMany({ user: { $in: [t.requester, t.receiver] } }, { $inc: { total_coins: totalAwarded, earned_coins: totalAwarded } });
+
+        // Create Coin Transactions
+        await CoinTransaction.create({
+            receiver_id: t.requester,
+            amount: totalAwarded,
+            transaction_type: 'swap_reward',
+            reference_id: tradeId,
+            status: 'completed'
+        });
+        await CoinTransaction.create({
+            receiver_id: t.receiver,
+            amount: totalAwarded,
+            transaction_type: 'swap_reward',
+            reference_id: tradeId,
+            status: 'completed'
+        });
+
+        // Log Swap
+        await logActivity(t.requester, 'swap', `Completed swap with ${t.receiver_name}`, { trade_id: tradeId, coins: totalAwarded });
+        await logActivity(t.receiver, 'swap', `Completed swap with ${t.requester_name}`, { trade_id: tradeId, coins: totalAwarded });
+
+        // Achievements - First Exchange
+        const requesterTrades = await Trade.countDocuments({ requester: t.requester, status: 'completed' });
+        if (requesterTrades === 1) {
+            await UserAchievement.create({
+                user_id: t.requester,
+                achievement_type: 'First Successful Exchange',
+                description: 'Completed your first swap on Anata Techtonic'
+            });
+        }
+        const receiverTrades = await Trade.countDocuments({ receiver: t.receiver, status: 'completed' });
+        if (receiverTrades === 1) {
+            await UserAchievement.create({
+                user_id: t.receiver,
+                achievement_type: 'First Successful Exchange',
+                description: 'Completed your first swap on Anata Techtonic'
+            });
+        }
 
         res.json({ message: 'Trade completed and coins awarded!', coinsAwarded: totalAwarded, coinsAwared: totalAwarded });
     } catch (err) {
@@ -371,6 +458,17 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
         }
 
         await Message.create({ trade: trade_id, sender: req.user.userId, message_text });
+        
+        // Also save to secure ChatMessage
+        const receiver_id = trade.requester.toString() === req.user.userId ? trade.receiver : trade.requester;
+        await ChatMessage.create({
+            sender_id: req.user.userId,
+            receiver_id: receiver_id,
+            encrypted_message: encrypt(message_text)
+        });
+
+        await logActivity(req.user.userId, 'chat message', `Sent message in trade ${trade_id}`, { trade_id });
+
         res.status(201).json({ message: 'Message sent!' });
     } catch (err) {
         res.status(500).json({ error: 'Failed to transmit message.' });
@@ -446,9 +544,103 @@ app.post('/api/courses/:id/buy', authenticateToken, async (req, res) => {
         wallet.used_coins += course.coin_price;
         await wallet.save();
 
+        // Track redemption
+        await UserCourse.create({
+            user_id: req.user.userId,
+            course_id: courseId,
+            access_status: 'Accessible Now'
+        });
+
+        // Add coin transaction
+        await CoinTransaction.create({
+            sender_id: req.user.userId,
+            receiver_id: null, // to system
+            amount: course.coin_price,
+            transaction_type: 'course_purchase',
+            reference_id: courseId,
+            status: 'completed'
+        });
+
+        await logActivity(req.user.userId, 'course redemption', `Redeemed course: ${course.course_name}`, { course_id: courseId });
+
         res.json({ message: `Successfully purchased ${course.course_name}!` });
     } catch (err) {
         res.status(500).json({ error: 'Failed to buy course.' });
+    }
+});
+
+// GET user achievements
+app.get('/api/achievements', authenticateToken, async (req, res) => {
+    try {
+        const achievements = await UserAchievement.find({ user_id: req.user.userId }).sort({ created_at: -1 });
+        res.json(achievements);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch achievements.' });
+    }
+});
+
+// UPDATE achievement with review/rating
+app.put('/api/achievements/:id', authenticateToken, async (req, res) => {
+    try {
+        const { rating, review } = req.body;
+        const achievement = await UserAchievement.findOneAndUpdate(
+            { _id: req.params.id, user_id: req.user.userId },
+            { rating, review },
+            { new: true }
+        );
+        if (!achievement) return res.status(404).json({ error: 'Achievement not found.' });
+        res.json({ message: 'Achievement updated!', achievement });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update achievement.' });
+    }
+});
+
+// GET secure chat history
+app.get('/api/chat/history', authenticateToken, async (req, res) => {
+    try {
+        const messages = await ChatMessage.find({
+            $or: [{ sender_id: req.user.userId }, { receiver_id: req.user.userId }],
+            is_deleted: false
+        })
+        .populate('sender_id', 'name')
+        .populate('receiver_id', 'name')
+        .sort({ created_at: -1 });
+
+        const decryptedMessages = messages.map(m => ({
+            id: m._id,
+            sender_id: m.sender_id._id,
+            sender_name: m.sender_id.name,
+            receiver_id: m.receiver_id._id,
+            receiver_name: m.receiver_id.name,
+            message: decrypt(m.encrypted_message),
+            created_at: m.created_at
+        }));
+
+        res.json(decryptedMessages);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch chat history.' });
+    }
+});
+
+// GET my courses status
+app.get('/api/my-courses', authenticateToken, async (req, res) => {
+    try {
+        const allCourses = await Course.find();
+        const userCourses = await UserCourse.find({ user_id: req.user.userId });
+        
+        const redeemedIds = userCourses.map(uc => uc.course_id.toString());
+        
+        const mapped = allCourses.map(c => {
+            const isRedeemed = redeemedIds.includes(c._id.toString());
+            return {
+                ...c.toObject(),
+                status: isRedeemed ? 'Accessible Now' : 'Locked'
+            };
+        });
+        
+        res.json(mapped);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch course status.' });
     }
 });
 
@@ -609,6 +801,67 @@ app.get('/api/admin/users/:id/skill-history', authenticateToken, adminOnly, asyn
         res.json(history);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch skill history.' });
+    }
+});
+
+// GET detailed analytics for a specific user
+app.get('/api/admin/users/:id/detailed-stats', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await User.findById(userId).select('-password');
+        if (!user) return res.status(404).json({ error: 'User not found.' });
+
+        const totalSwaps = await Trade.countDocuments({ $or: [{ requester: userId }, { receiver: userId }], status: 'completed' });
+        const wallet = await Wallet.findOne({ user: userId });
+        const totalChats = await ChatMessage.countDocuments({ $or: [{ sender_id: userId }, { receiver_id: userId }] });
+        const totalCourses = await UserCourse.countDocuments({ user_id: userId });
+        
+        const firstSwap = await Trade.findOne({ $or: [{ requester: userId }, { receiver: userId }], status: 'completed' }).sort({ createdAt: 1 });
+        
+        const activityLogs = await ActivityLog.find({ user_id: userId }).sort({ created_at: -1 }).limit(50);
+
+        // Timeline data for charts
+        const swapTimeline = await Trade.aggregate([
+            { $match: { $or: [{ requester: mongoose.Types.ObjectId(userId) }, { receiver: mongoose.Types.ObjectId(userId) }], status: 'completed' } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const coinsTimeline = await CoinTransaction.aggregate([
+            { $match: { receiver_id: mongoose.Types.ObjectId(userId) } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } }, earned: { $sum: "$amount" } } },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const spentTimeline = await CoinTransaction.aggregate([
+            { $match: { sender_id: mongoose.Types.ObjectId(userId) } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } }, spent: { $sum: "$amount" } } },
+            { $sort: { _id: 1 } }
+        ]);
+
+        res.json({
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                joinDate: user.createdAt,
+                totalSwaps,
+                coinsEarned: wallet ? wallet.earned_coins : 0,
+                coinsSpent: wallet ? wallet.used_coins : 0,
+                totalChats,
+                coursesRedeemed: totalCourses,
+                firstSwapDate: firstSwap ? firstSwap.createdAt : 'N/A'
+            },
+            activityLogs,
+            charts: {
+                swapTimeline,
+                coinsEarned: coinsTimeline,
+                coinsSpent: spentTimeline
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch user detailed stats.' });
     }
 });
 
