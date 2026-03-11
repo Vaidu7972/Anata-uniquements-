@@ -3,6 +3,38 @@
   publish = "frontend"
   command = "echo 'Frontend deployment'"
 
+# ── Serve all .html files directly (no redirect) ──
+[[redirects]]
+  from = "/index.html"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/login.html"
+  to = "/login.html"
+  status = 200
+
+[[redirects]]
+  from = "/register.html"
+  to = "/register.html"
+  status = 200
+
+[[redirects]]
+  from = "/dashboard.html"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin-login.html"
+  to = "/admin-login.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin.html"
+  to = "/admin.html"
+  status = 200
+
+# ── Catch-all fallback for any other routes ──
 [[redirects]]
   from = "/*"
   to = "/index.html"
