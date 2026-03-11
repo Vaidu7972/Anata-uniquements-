@@ -401,9 +401,12 @@ app.put('/api/trades/:id/complete', authenticateToken, async (req, res) => {
             status: 'completed'
         });
 
+        // Fetch populated trade for names
+        const populatedTrade = await Trade.findById(tradeId).populate('requester', 'name').populate('receiver', 'name');
+        
         // Log Swap
-        await logActivity(t.requester, 'swap', `Completed swap with ${t.receiver_name}`, { trade_id: tradeId, coins: totalAwarded });
-        await logActivity(t.receiver, 'swap', `Completed swap with ${t.requester_name}`, { trade_id: tradeId, coins: totalAwarded });
+        await logActivity(t.requester, 'swap', `Completed swap with ${populatedTrade.receiver.name}`, { trade_id: tradeId, coins: totalAwarded });
+        await logActivity(t.receiver, 'swap', `Completed swap with ${populatedTrade.requester.name}`, { trade_id: tradeId, coins: totalAwarded });
 
         // Achievements - First Exchange
         const requesterTrades = await Trade.countDocuments({ requester: t.requester, status: 'completed' });
@@ -606,18 +609,26 @@ app.get('/api/chat/history', authenticateToken, async (req, res) => {
         .populate('receiver_id', 'name')
         .sort({ created_at: -1 });
 
-        const decryptedMessages = messages.map(m => ({
-            id: m._id,
-            sender_id: m.sender_id._id,
-            sender_name: m.sender_id.name,
-            receiver_id: m.receiver_id._id,
-            receiver_name: m.receiver_id.name,
-            message: decrypt(m.encrypted_message),
-            created_at: m.created_at
-        }));
+        const decryptedMessages = messages.map(m => {
+            const senderId = m.sender_id ? (m.sender_id._id || m.sender_id) : 'unknown';
+            const senderName = m.sender_id ? (m.sender_id.name || 'Unknown Node') : 'Unknown Node';
+            const receiverId = m.receiver_id ? (m.receiver_id._id || m.receiver_id) : 'unknown';
+            const receiverName = m.receiver_id ? (m.receiver_id.name || 'Unknown Node') : 'Unknown Node';
+            
+            return {
+                id: m._id,
+                sender_id: senderId.toString(),
+                sender_name: senderName,
+                receiver_id: receiverId.toString(),
+                receiver_name: receiverName,
+                message: decrypt(m.encrypted_message),
+                created_at: m.created_at
+            };
+        });
 
         res.json(decryptedMessages);
     } catch (err) {
+        console.error('Chat history error:', err);
         res.status(500).json({ error: 'Failed to fetch chat history.' });
     }
 });
