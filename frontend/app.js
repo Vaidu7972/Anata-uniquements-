@@ -157,34 +157,73 @@ async function initDashboard() {
 // Profile & Skills
 async function loadProfile() {
     try {
-        const res = await fetch(`${API_URL}/profile`, { headers: getAuthHeaders() });
-        const data = await res.json();
+        const [profileRes, walletRes, tradesRes] = await Promise.all([
+            fetch(`${API_URL}/profile`, { headers: getAuthHeaders() }),
+            fetch(`${API_URL}/wallet`, { headers: getAuthHeaders() }),
+            fetch(`${API_URL}/trades`, { headers: getAuthHeaders() })
+        ]);
 
-        if (res.ok) {
-            document.getElementById('profileName').innerText = data.user.name;
-            document.getElementById('profileEmail').innerText = data.user.email;
-            document.getElementById('profileRole').innerText = data.user.role.toUpperCase();
+        const profileData = await profileRes.json();
+        const walletData = walletRes.ok ? await walletRes.json() : { total_coins: 0 };
+        const tradesData = tradesRes.ok ? await tradesRes.json() : [];
 
-            renderSkillsTable(data.skills);
+        if (profileRes.ok) {
+            document.getElementById('profileName').innerHTML = `${profileData.user.name} <i class="fa-solid fa-circle-check text-success fs-5" title="Verified Node"></i>`;
+            document.getElementById('profileEmail').innerText = profileData.user.email;
+            document.getElementById('profileRole').innerText = profileData.user.role.toUpperCase();
+
+            // Stats
+            const completedTrades = tradesData.filter(t => t.status === 'completed').length;
+            document.getElementById('profileStatTrades').innerText = completedTrades;
+            document.getElementById('profileStatCoins').innerText = walletData.total_coins;
+            document.getElementById('profileStatSkills').innerText = profileData.skills.length;
+
+            // Achievements Logic
+            let achievements = '';
+            if (completedTrades > 0) achievements += '<span class="badge bg-success border border-success border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-handshake me-1"></i> First Exchange</span>';
+            if (completedTrades >= 5) achievements += '<span class="badge bg-warning text-dark border border-warning border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-star me-1"></i> Trusted Node</span>';
+            if (walletData.total_coins >= 500) achievements += '<span class="badge bg-accent text-dark border border-accent border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-gem me-1"></i> Wealthy</span>';
+            if (profileData.skills.some(s => s.skill_grade === 'A')) achievements += '<span class="badge bg-info text-dark border border-info border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-crown me-1"></i> Class A Expert</span>';
+            if (!achievements) achievements = '<span class="text-muted small font-monospace">No verified achievements yet...</span>';
+
+            document.getElementById('profileAchievements').innerHTML = achievements;
+
+            renderSkillsBadges(profileData.skills);
         }
     } catch (err) {
         console.error(err);
     }
 }
 
-function renderSkillsTable(skills) {
-    const tbody = document.getElementById('skillsTableBody');
-    tbody.innerHTML = '';
+function renderSkillsBadges(skills) {
+    const offeredCont = document.getElementById('skillsOfferedContainer');
+    const requiredCont = document.getElementById('skillsRequiredContainer');
+
+    let offeredHTML = '';
+    let requiredHTML = '';
+
     skills.forEach(skill => {
-        const typeBadge = skill.skill_type === 'offered' ? '<span class="badge bg-success">Offered</span>' : '<span class="badge bg-warning text-dark">Required</span>';
-        tbody.innerHTML += `
-            <tr>
-                <td class="fw-semibold">${skill.skill_name}</td>
-                <td>${typeBadge}</td>
-                <td class="text-center fw-bold text-light">${skill.skill_grade}</td>
-            </tr>
+        // Different styling based on grade
+        let gradeClass = 'bg-secondary';
+        let gradeLabel = 'Base';
+        if (skill.skill_grade === 'A') { gradeClass = 'bg-accent text-dark'; gradeLabel = 'Expert'; }
+        else if (skill.skill_grade === 'B') { gradeClass = 'bg-primary text-white'; gradeLabel = 'Adv'; }
+        else if (skill.skill_grade === 'C') { gradeClass = 'bg-info text-dark'; gradeLabel = 'Inter'; }
+        else if (skill.skill_grade === 'D') { gradeClass = 'bg-warning text-dark'; gradeLabel = 'Beg'; }
+
+        const badgeHTML = `
+            <div class="d-inline-block border border-secondary border-opacity-50 rounded-pill p-1 pe-3 bg-dark bg-opacity-50 hover-glow transition-all mb-1" style="cursor: default;">
+                <span class="badge rounded-pill ${gradeClass} ms-1 me-2" title="${gradeLabel}">Class ${skill.skill_grade}</span>
+                <span class="fw-bold text-white small">${skill.skill_name}</span>
+            </div>
         `;
+
+        if (skill.skill_type === 'offered') offeredHTML += badgeHTML;
+        else requiredHTML += badgeHTML;
     });
+
+    if (offeredCont) offeredCont.innerHTML = offeredHTML || '<span class="text-muted small font-monospace">No capabilities installed...</span>';
+    if (requiredCont) requiredCont.innerHTML = requiredHTML || '<span class="text-muted small font-monospace">No requirements logged...</span>';
 }
 
 const addSkillForm = document.getElementById('addSkillForm');

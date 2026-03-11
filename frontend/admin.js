@@ -8,7 +8,19 @@
 // ============================================================
 //  CONFIG
 // ============================================================
-const API = '';   // same-origin; set to 'http://localhost:3000' if running separately
+const LOCAL_BASE = 'http://localhost:3000';
+const HOSTED_BASE = 'https://anata-backend.onrender.com';
+let API = HOSTED_BASE;
+
+(async function detectLocalBackend() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 800);
+        const res = await fetch(LOCAL_BASE + '/api/health', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res && res.ok) API = LOCAL_BASE;
+    } catch (err) { }
+})();
 
 // ============================================================
 //  STATE
