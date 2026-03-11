@@ -839,28 +839,76 @@ let allChatLogs = [];
 
 async function loadChatHistory() {
     const container = document.getElementById('chatHistoryContainer');
+    const contactsContainer = document.getElementById('chatContactsContainer');
     try {
         const res = await fetch(`${API_URL}/chat/history`, { headers: getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
             allChatLogs = data;
-            renderChatHistory(data);
+            renderChatContacts();
         }
     } catch (err) {
-        container.innerHTML = `<div class="text-center py-5 text-danger">Failed to sync encrypted history logs.</div>`;
+        contactsContainer.innerHTML = `<div class="text-center py-5 text-danger">Failed to sync encrypted history logs.</div>`;
     }
 }
 
-function renderChatHistory(logs) {
+function renderChatContacts() {
+    const contactsContainer = document.getElementById('chatContactsContainer');
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (allChatLogs.length === 0) {
+        contactsContainer.innerHTML = `<div class="text-center py-5 text-muted"><p>No contacts found.</p></div>`;
+        return;
+    }
+
+    // Extract unique contacts
+    const contactsMap = new Map();
+    allChatLogs.forEach(msg => {
+        const isMe = msg.sender_id === user.id;
+        const contactId = isMe ? msg.receiver_id : msg.sender_id;
+        const contactName = isMe ? (msg.receiver_name || 'Unknown Node') : (msg.sender_name || 'Unknown Node');
+        
+        if (!contactsMap.has(contactId)) {
+            contactsMap.set(contactId, { id: contactId, name: contactName, lastActive: msg.created_at });
+        } else {
+            // Update last active if newer
+            if (new Date(msg.created_at) > new Date(contactsMap.get(contactId).lastActive)) {
+                contactsMap.get(contactId).lastActive = msg.created_at;
+            }
+        }
+    });
+
+    const contacts = Array.from(contactsMap.values()).sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
+
+    contactsContainer.innerHTML = contacts.map(contact => {
+        return `
+            <div class="glass-panel p-2 mb-2 border-secondary border-opacity-25 hover-glow cursor-pointer" onclick="renderChatHistoryForNode('${contact.id}', '${contact.name}')">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-25 rounded-circle p-2 me-2">
+                        <i class="fa-solid fa-satellite-dish text-info small"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-white small">${contact.name}</div>
+                        <div class="x-small text-muted font-monospace opacity-75">Target Node</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderChatHistoryForNode(nodeId, nodeName) {
     const container = document.getElementById('chatHistoryContainer');
     const user = JSON.parse(localStorage.getItem('user'));
     
-    if (logs.length === 0) {
+    const nodeLogs = allChatLogs.filter(msg => msg.sender_id === nodeId || msg.receiver_id === nodeId);
+    
+    if (nodeLogs.length === 0) {
         container.innerHTML = `<div class="text-center py-5 text-muted"><i class="fa-solid fa-comment-slash fa-3x mb-3 opacity-25"></i><p>No secure transmission history found.</p></div>`;
         return;
     }
 
-    container.innerHTML = logs.map(msg => {
+    container.innerHTML = nodeLogs.map(msg => {
         const isMe = msg.sender_id === user.id;
         const senderName = isMe ? 'YOU' : (msg.sender_name || 'Unknown Node');
         const receiverName = isMe ? (msg.receiver_name || 'Unknown Node') : 'YOU';
@@ -883,12 +931,47 @@ function renderChatHistory(logs) {
 
 function filterChatHistory() {
     const query = document.getElementById('chatSearch').value.toLowerCase();
-    const filtered = allChatLogs.filter(log => 
+    
+    // Fall back to all if empty
+    if(!query) {
+        renderChatContacts();
+        document.getElementById('chatHistoryContainer').innerHTML = `<div class="text-center py-5 text-muted"><i class="fa-solid fa-satellite-dish fa-3x mb-3 opacity-25"></i><p class="mt-3 text-muted font-monospace">SELECT_NODE_FOR_HISTORY</p></div>`;
+        return;
+    }
+
+    const filteredLogs = allChatLogs.filter(log => 
         log.message.toLowerCase().includes(query) || 
-        (log.sender_id.name && log.sender_id.name.toLowerCase().includes(query)) ||
-        (log.receiver_id.name && log.receiver_id.name.toLowerCase().includes(query))
+        (log.sender_name && log.sender_name.toLowerCase().includes(query)) ||
+        (log.receiver_name && log.receiver_name.toLowerCase().includes(query))
     );
-    renderChatHistory(filtered);
+    
+    const container = document.getElementById('chatHistoryContainer');
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (filteredLogs.length === 0) {
+        container.innerHTML = `<div class="text-center py-5 text-muted"><i class="fa-solid fa-comment-slash fa-3x mb-3 opacity-25"></i><p>No search results found.</p></div>`;
+        return;
+    }
+
+    container.innerHTML = filteredLogs.map(msg => {
+        const isMe = msg.sender_id === user.id;
+        const senderName = isMe ? 'YOU' : (msg.sender_name || 'Unknown Node');
+        const receiverName = isMe ? (msg.receiver_name || 'Unknown Node') : 'YOU';
+        const date = new Date(msg.created_at).toLocaleString();
+        
+        return `
+            <div class="glass-panel p-3 border-secondary border-opacity-10 hover-glow">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold small ${isMe ? 'text-accent' : 'text-primary'}">
+                        ${isMe ? `<i class="fa-solid fa-arrow-up-right-dots me-1 small"></i>` : `<i class="fa-solid fa-arrow-down-left-dots me-1 small"></i>`}
+                        ${senderName} <i class="fa-solid fa-caret-right mx-1 opacity-50"></i> ${receiverName}
+                    </span>
+                    <span class="x-small text-muted font-monospace opacity-50">${date}</span>
+                </div>
+                <div class="text-white small lh-base">${msg.message}</div>
+            </div>
+        `;
+    }).join('');
 }
 const forgotPasswordForm = document.getElementById('forgotPasswordForm');
 if (forgotPasswordForm) {
