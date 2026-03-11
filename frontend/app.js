@@ -3,6 +3,7 @@ const LOCAL_BASE = 'http://localhost:3000/api';
 const HOSTED_BASE = 'https://anata-backend.onrender.com/api';
 let API_URL = HOSTED_BASE; // start with hosted backend to avoid waiting
 //done
+const hi=10;
 // Quick health check to detect a running local backend and switch to it if available.
 (async function detectLocalBackend() {
     try {
