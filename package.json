@@ -1,0 +1,10 @@
+{
+  "name": "tachyon-satellite-root",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "build": "cd backend && npm run dev",
+    "install": "cd backend && npm install"
+  }
+}
