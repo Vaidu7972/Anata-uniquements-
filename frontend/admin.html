@@ -468,6 +468,13 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link admin-nav d-flex align-items-center py-3 px-3" href="#"
+                                onclick="showAdminSection('user-analytics', this)">
+                                <i class="fa-solid fa-user-gear fa-fw me-3 text-info"></i>
+                                <span class="fw-bold">User Analytics</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link admin-nav d-flex align-items-center py-3 px-3" href="#"
                                 onclick="showAdminSection('settings', this)">
                                 <i class="fa-solid fa-gear fa-fw me-3 text-secondary"></i>
                                 <span class="fw-bold">Settings</span>
@@ -796,8 +803,38 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div
-                            class="d-flex justify-content-between align-items-center px-4 py-3 border-top border-secondary border-opacity-25">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================
+                     SECTION: USER ANALYTICS
+                ======================================================== -->
+                <div id="admin-section-user-analytics" class="admin-section">
+                    <div class="section-header">
+                        <div>
+                            <h1 class="h3 fw-bold text-white mb-0">User <span class="text-gradient">Analytics</span></h1>
+                            <p class="text-muted small mb-0 mt-1 font-monospace">Deep dive into user performance and history</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-3 mb-4 filter-bar">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" id="userAnalyticsSearch" placeholder="🔍 Search users for detailed analytics..." oninput="filterAndRenderUserAnalytics()">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-glow rounded-pill px-4 w-100" onclick="loadUserAnalytics()">
+                                    <i class="fa-solid fa-rotate me-2"></i>Refresh List
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4" id="userAnalyticsGrid">
+                        <!-- User cards injected by JS -->
+                    </div>
+                </div>
                             <small class="text-muted" id="skillPaginationInfo">–</small>
                             <nav>
                                 <ul class="pagination pagination-sm mb-0 gap-1" id="skillPagination"></ul>
@@ -1175,6 +1212,68 @@
                     <button type="button" class="btn btn-danger rounded-pill px-5 fw-bold" id="confirmDeleteBtn">
                         <i class="fa-solid fa-trash me-2"></i>Delete
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Analytics Dashboard Modal -->
+    <div class="modal fade" id="userAnalyticsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-card border-info border-opacity-25" style="max-height: 90vh;">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3" style="background: rgba(0, 206, 201, 0.08);">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="fa-solid fa-user-chart text-info fa-lg"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold text-white mb-0" id="uaModalUserName">User Analytics Dashboard</h5>
+                            <small class="text-muted font-monospace" id="uaModalUserEmail">USER_PROFILE // ANALYTICS_v2</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 bg-dark bg-opacity-75">
+                    <!-- User Statistics Summary -->
+                    <div class="row g-3 mb-4" id="uaStatsRow">
+                        <!-- Stat cards injected by JS -->
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-12">
+                            <div class="glass-panel p-3">
+                                <h6 class="text-white fw-bold mb-3 small text-uppercase tracking-wider">Activity Frequency & Timeline</h6>
+                                <div style="height: 300px;">
+                                    <canvas id="uaTimelineChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-12">
+                            <div class="glass-panel p-3">
+                                <h6 class="text-white fw-bold mb-3 small text-uppercase tracking-wider">Coins Earned vs Coins Spent</h6>
+                                <div style="height: 300px;">
+                                    <canvas id="uaCoinsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Log Table -->
+                    <h6 class="text-white fw-bold mb-3 small text-uppercase tracking-wider">Detailed Activity Log</h6>
+                    <div class="admin-table-wrap">
+                        <table class="table admin-table mb-0 text-light">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Action Type</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="uaActivityLogBody">
+                                <!-- Log rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

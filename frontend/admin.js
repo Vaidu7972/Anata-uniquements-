@@ -33,6 +33,7 @@ let allCourses = [];
 let allSkills = [];
 let analyticsData = null;
 let allTrades = [];
+let allAnalyticsUsers = [];
 
 // Pagination
 const PAGE_SIZE = 10;
@@ -87,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadUsers();
     loadCourses();
     loadSkills();
+    loadUserAnalytics();
 });
 
 // ============================================================
@@ -888,6 +890,160 @@ async function loadTrades() {
     } catch (err) {
         showToast('Failed to load trades: ' + err.message, 'danger');
     }
+}
+
+// ============================================================
+//  USER ANALYTICS (NEW)
+// ============================================================
+async function loadUserAnalytics() {
+    try {
+        const data = await apiGet('/api/admin/users');
+        if (!data) return;
+        allAnalyticsUsers = data;
+        filterAndRenderUserAnalytics();
+    } catch (err) {
+        showToast('Failed to load user analytics list: ' + err.message, 'danger');
+    }
+}
+
+function filterAndRenderUserAnalytics() {
+    const search = (document.getElementById('userAnalyticsSearch')?.value || '').toLowerCase();
+    const grid = document.getElementById('userAnalyticsGrid');
+    
+    if (!grid) return;
+
+    const filtered = allAnalyticsUsers.filter(u => 
+        !search || (u.name && u.name.toLowerCase().includes(search)) || (u.email && u.email.toLowerCase().includes(search))
+    );
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-12 text-center py-5 text-muted">No users matching search found.</div>`;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(u => `
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="glass-card p-4 h-100 hover-glow cursor-pointer" onclick="openUserDashboard('${u._id}')">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="bg-info bg-opacity-20 rounded-pill d-flex align-items-center justify-content-center" style="width:50px;height:50px;border:1px solid rgba(0,206,201,0.3);">
+                        <i class="fa-solid fa-user text-info"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="fw-bold text-white text-truncate">${escHtml(u.name)}</div>
+                        <div class="text-muted small text-truncate">${u.email}</div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top border-secondary border-opacity-10">
+                    <span class="text-muted small" style="font-size:0.7rem;"><i class="fa-solid fa-calendar me-1"></i>Joined ${formatDate(u.createdAt)}</span>
+                    <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2 small" style="font-size:0.65rem;">View Stats</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function openUserDashboard(userId) {
+    try {
+        const data = await apiGet(`/api/admin/users/${userId}/detailed-stats`);
+        if (!data) return;
+
+        const u = data.user;
+        document.getElementById('uaModalUserName').textContent = u.name;
+        document.getElementById('uaModalUserEmail').textContent = u.email;
+
+        // Render Summary Stats
+        const statsRow = document.getElementById('uaStatsRow');
+        statsRow.innerHTML = `
+            <div class="col-6 col-md-3">
+                <div class="glass-panel p-3 text-center">
+                    <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.6rem;">Total Swaps</div>
+                    <div class="h3 fw-bold text-info mb-0">${u.totalSwaps}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-panel p-3 text-center">
+                    <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.6rem;">Coins Earned</div>
+                    <div class="h3 fw-bold text-success mb-0">${u.coinsEarned}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-panel p-3 text-center">
+                    <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.6rem;">Coins Spent</div>
+                    <div class="h3 fw-bold text-warning mb-0">${u.coinsSpent}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-panel p-3 text-center">
+                    <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.6rem;">Courses</div>
+                    <div class="h3 fw-bold text-accent mb-0">${u.coursesRedeemed}</div>
+                </div>
+            </div>
+        `;
+
+        // Render Activity Log
+        const logBody = document.getElementById('uaActivityLogBody');
+        if (data.activityLogs.length === 0) {
+            logBody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No activity recorded yet</td></tr>`;
+        } else {
+            logBody.innerHTML = data.activityLogs.map(log => `
+                <tr>
+                    <td class="small text-muted" style="font-size:0.7rem;">${new Date(log.created_at).toLocaleString()}</td>
+                    <td><span class="badge bg-secondary-glow text-capitalize" style="font-size:0.65rem;">${log.action_type}</span></td>
+                    <td class="small text-white" style="font-size:0.75rem;">${escHtml(log.description)}</td>
+                    <td><span class="text-success small" style="font-size:0.65rem;"><i class="fa-solid fa-check-circle me-1"></i>Success</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // Render Charts
+        setTimeout(() => renderUACharts(data.charts), 400);
+
+        new bootstrap.Modal(document.getElementById('userAnalyticsModal')).show();
+    } catch (err) {
+        showToast('Failed to load user dashboard: ' + err.message, 'danger');
+    }
+}
+
+function renderUACharts(chartsData) {
+    // Timeline Chart (Activity/Swaps)
+    const timelineLabels = chartsData.swapTimeline.map(d => d._id);
+    const timelineCounts = chartsData.swapTimeline.map(d => d.count);
+    
+    makeLineChart('uaTimelineChart', timelineLabels, [{
+        label: 'Daily Swaps',
+        data: timelineCounts,
+        borderColor: '#00cec9',
+        backgroundColor: 'rgba(0,206,201,0.1)',
+        fill: true,
+        tension: 0.4
+    }]);
+
+    // Coins Earned vs Spent Chart
+    const allLabels = [...new Set([
+        ...chartsData.coinsEarned.map(d => d._id),
+        ...chartsData.coinsSpent.map(d => d._id)
+    ])].sort();
+    
+    makeLineChart('uaCoinsChart', allLabels, [
+        {
+            label: 'Coins Earned',
+            data: allLabels.map(l => {
+                const found = chartsData.coinsEarned.find(d => d._id === l);
+                return found ? found.earned : 0;
+            }),
+            borderColor: '#10b981',
+            backgroundColor: 'transparent'
+        },
+        {
+            label: 'Coins Spent',
+            data: allLabels.map(l => {
+                const found = chartsData.coinsSpent.find(d => d._id === l);
+                return found ? found.spent : 0;
+            }),
+            borderColor: '#f59e0b',
+            backgroundColor: 'transparent'
+        }
+    ]);
 }
 
 // ============================================================

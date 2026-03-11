@@ -130,6 +130,7 @@ function showSection(sectionId, clickedEl) {
     if (sectionId === 'trades') loadTrades();
     if (sectionId === 'wallet') loadWallet();
     if (sectionId === 'courses') loadCourses();
+    if (sectionId === 'chat-history') loadChatHistory();
     if (sectionId === 'admin') loadAdminUsers();
 }
 
@@ -178,15 +179,23 @@ async function loadProfile() {
             document.getElementById('profileStatCoins').innerText = walletData.total_coins;
             document.getElementById('profileStatSkills').innerText = profileData.skills.length;
 
-            // Achievements Logic
-            let achievements = '';
-            if (completedTrades > 0) achievements += '<span class="badge bg-success border border-success border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-handshake me-1"></i> First Exchange</span>';
-            if (completedTrades >= 5) achievements += '<span class="badge bg-warning text-dark border border-warning border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-star me-1"></i> Trusted Node</span>';
-            if (walletData.total_coins >= 500) achievements += '<span class="badge bg-accent text-dark border border-accent border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-gem me-1"></i> Wealthy</span>';
-            if (profileData.skills.some(s => s.skill_grade === 'A')) achievements += '<span class="badge bg-info text-dark border border-info border-opacity-25 p-2 px-3 rounded-pill"><i class="fa-solid fa-crown me-1"></i> Class A Expert</span>';
-            if (!achievements) achievements = '<span class="text-muted small font-monospace">No verified achievements yet...</span>';
-
-            document.getElementById('profileAchievements').innerHTML = achievements;
+            // Achievements Logic (Fetch from API)
+            try {
+                const achRes = await fetch(`${API_URL}/achievements`, { headers: getAuthHeaders() });
+                if (achRes.ok) {
+                    const achs = await achRes.json();
+                    let achHTML = '';
+                    achs.forEach(a => {
+                        const icon = a.type.includes('Exchange') ? 'fa-handshake' : 'fa-trophy';
+                        achHTML += `
+                            <div class="badge bg-success-glow border border-success border-opacity-25 p-2 px-3 rounded-pill mb-1 me-1 hover-glow cursor-help" title="${a.description}">
+                                <i class="fa-solid ${icon} me-1 text-success"></i> ${a.type}
+                                ${a.rating ? `<span class="ms-1 opacity-50 small">★${a.rating}</span>` : ''}
+                            </div>`;
+                    });
+                    if (achHTML) document.getElementById('profileAchievements').innerHTML = achHTML;
+                }
+            } catch (achErr) { console.error('Achievements fetch failed'); }
 
             renderSkillsBadges(profileData.skills);
         }
@@ -610,23 +619,39 @@ async function loadTradesOverview() {
 async function loadCourses() {
     const container = document.getElementById('coursesContainer');
     try {
-        const res = await fetch(`${API_URL}/courses`);
-        const courses = await res.json();
+        const [coursesRes, myCoursesRes] = await Promise.all([
+            fetch(`${API_URL}/courses`),
+            fetch(`${API_URL}/my-courses`, { headers: getAuthHeaders() })
+        ]);
+        
+        const courses = await coursesRes.json();
+        const myCourses = await myCoursesRes.json();
+        const myCourseIds = myCourses.map(mc => mc.course_id);
 
         container.innerHTML = '';
         courses.forEach(c => {
+            const isOwned = myCourseIds.includes(c._id);
+            const statusLabel = isOwned ? 
+                '<span class="badge bg-success-glow rounded-pill px-3 py-1" style="font-size:0.6rem;"><i class="fa-solid fa-unlock me-1"></i>Accessible Now</span>' : 
+                '<span class="badge bg-warning-glow rounded-pill px-3 py-1" style="font-size:0.6rem;"><i class="fa-solid fa-lock me-1"></i>Locked</span>';
+            
+            const actionBtn = isOwned ? 
+                `<button class="btn btn-primary rounded-pill py-2 px-4 fw-bold" onclick="showAlert('Module already synchronized.', 'info', 'alertBoxDash')">Open Module</button>` :
+                `<button class="btn btn-outline-glow rounded-pill py-2 px-4 fw-bold" onclick="buyCourse('${c._id}', ${c.coin_price})">Download Module</button>`;
+
             container.innerHTML += `
                 <div class="col-md-6 col-lg-4">
                     <div class="glass-card shadow-sm border-0 rounded-4 h-100 overflow-hidden d-flex flex-column border-purple border-opacity-25">
                         <div class="bg-gradient text-white p-4 text-center border-bottom border-secondary border-opacity-25" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);">
                             <i class="fa-solid fa-graduation-cap fa-3x mb-2 text-white opacity-75"></i>
                             <h5 class="fw-bold mb-0">${c.course_name}</h5>
+                            <div class="mt-2">${statusLabel}</div>
                         </div>
                         <div class="card-body p-4 d-flex flex-column flex-grow-1 bg-dark bg-opacity-50">
                             <p class="text-muted small mb-4 flex-grow-1">${c.description}</p>
                             <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <span class="fw-bold text-warning font-monospace fs-5"><i class="fa-solid fa-coins me-1 text-warning"></i>${c.coin_price}</span>
-                                <button class="btn btn-outline-glow rounded-pill py-2 px-4 fw-bold" onclick="buyCourse('${c._id}', ${c.coin_price})">Download Module</button>
+                                ${actionBtn}
                             </div>
                         </div>
                     </div>
@@ -808,8 +833,63 @@ if (sendMessageForm) {
 }
 
 // -----------------------------------------------------
-// FORGOT PASSWORD LOGIC
+// SECURE CHAT LOGS
 // -----------------------------------------------------
+let allChatLogs = [];
+
+async function loadChatHistory() {
+    const container = document.getElementById('chatHistoryContainer');
+    try {
+        const res = await fetch(`${API_URL}/chat/history`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+            allChatLogs = data;
+            renderChatHistory(data);
+        }
+    } catch (err) {
+        container.innerHTML = `<div class="text-center py-5 text-danger">Failed to sync encrypted history logs.</div>`;
+    }
+}
+
+function renderChatHistory(logs) {
+    const container = document.getElementById('chatHistoryContainer');
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (logs.length === 0) {
+        container.innerHTML = `<div class="text-center py-5 text-muted"><i class="fa-solid fa-comment-slash fa-3x mb-3 opacity-25"></i><p>No secure transmission history found.</p></div>`;
+        return;
+    }
+
+    container.innerHTML = logs.map(msg => {
+        const isMe = msg.sender_id._id === user.id || msg.sender_id === user.id;
+        const senderName = isMe ? 'YOU' : (msg.sender_id.name || 'Unknown Node');
+        const receiverName = isMe ? (msg.receiver_id.name || 'Unknown Node') : 'YOU';
+        const date = new Date(msg.created_at).toLocaleString();
+        
+        return `
+            <div class="glass-panel p-3 border-secondary border-opacity-10 hover-glow">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold small ${isMe ? 'text-accent' : 'text-primary'}">
+                        ${isMe ? `<i class="fa-solid fa-arrow-up-right-dots me-1 small"></i>` : `<i class="fa-solid fa-arrow-down-left-dots me-1 small"></i>`}
+                        ${senderName} <i class="fa-solid fa-caret-right mx-1 opacity-50"></i> ${receiverName}
+                    </span>
+                    <span class="x-small text-muted font-monospace opacity-50">${date}</span>
+                </div>
+                <div class="text-white small lh-base">${msg.message}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filterChatHistory() {
+    const query = document.getElementById('chatSearch').value.toLowerCase();
+    const filtered = allChatLogs.filter(log => 
+        log.message.toLowerCase().includes(query) || 
+        (log.sender_id.name && log.sender_id.name.toLowerCase().includes(query)) ||
+        (log.receiver_id.name && log.receiver_id.name.toLowerCase().includes(query))
+    );
+    renderChatHistory(filtered);
+}
 const forgotPasswordForm = document.getElementById('forgotPasswordForm');
 if (forgotPasswordForm) {
     forgotPasswordForm.addEventListener('submit', async (e) => {
